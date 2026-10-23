@@ -17,3 +17,12 @@ build/
 
 # APM dependencies
 apm_modules/
+
+# OpenTofu
+infra/**/.terraform/
+infra/**/*.tfstate
+infra/**/*.tfstate.*
+infra/**/*.tfplan
+infra/**/*.auto.tfvars
+infra/environments/*.backend.hcl
+crash.log*

@@ -1,0 +1,6 @@
+# Copy to dev.backend.hcl and fill in the state storage account created by the bootstrap step.
+resource_group_name  = "<state-resource-group>"
+storage_account_name = "<state-storage-account>"
+container_name       = "tfstate"
+key                  = "bookit-dev.tfstate"
+use_azuread_auth     = true
