@@ -103,7 +103,7 @@ jobs:
           HASH: ${{ steps.plan.outputs.hash }}
           DESTRUCTIVE: ${{ steps.plan.outputs.destructive }}
         run: |
-          printf 'Phase: %s\n\nPrivate Blob: `%s`\n\nSHA-256: `%s`\n\nDestructive: %s\n' \
+          printf 'Phase: %s\n\nPrivate Blob: %s\n\nSHA-256: %s\n\nDestructive: %s\n' \
             "$PLAN_PHASE" "$KEY" "$HASH" "$DESTRUCTIVE" >> "$GITHUB_STEP_SUMMARY"
 
   approve:
