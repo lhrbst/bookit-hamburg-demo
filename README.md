@@ -186,10 +186,10 @@ delivery. These workflows run on github.com:
 `validate` is the required aggregate merge check: skipped, failed or cancelled
 validation cannot pass it. PRs receive no Azure/OIDC credentials, secrets,
 registry-write permission or remote-state access. Security checks block high
-and critical runtime dependency findings. **The current lockfiles already
-contain such findings in both projects; validation and delivery will remain
-blocked until those dependencies are remediated.** This change does not
-suppress them or upgrade unrelated dependencies.
+and critical runtime dependency findings; they are not allowlisted. The
+backend Zod runtime dependency has been upgraded to its patched major, and
+frontend build/scaffolding tools are classified as development dependencies
+rather than production runtime packages.
 
 The frontend and both `linux/amd64` images are built once during validation.
 Delivery verifies the source SHA and artifact file hashes, then publishes

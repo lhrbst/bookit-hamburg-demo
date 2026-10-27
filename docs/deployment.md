@@ -48,9 +48,9 @@ Configured on github.com for `lhrbst/bookit-hamburg-demo`:
 | Dependabot | Weekly Actions, npm and Docker updates |
 
 `validate.yml` publishes an aggregate job named exactly `validate`, with no
-path filters. It fails unless every validation step succeeds. Existing
-high/critical runtime audit findings block this gate until separately
-remediated; they are not allowlisted by the workflows.
+path filters. It fails unless every validation step succeeds. High/critical
+runtime dependency advisories are not allowlisted and block the gate until
+remediated.
 
 `dev` variables: `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`,
 `AZURE_RESOURCE_GROUP`, `TF_STATE_STORAGE_ACCOUNT`, `TF_STATE_CONTAINER`,
