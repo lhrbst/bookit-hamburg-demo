@@ -28,8 +28,23 @@ output "key_vault_uri" {
   value       = azurerm_key_vault.this.vault_uri
 }
 
-output "static_web_app_api_key" {
-  description = "Deployment token for the Static Web App. Store it as a GitHub secret; never commit it."
-  value       = azurerm_static_web_app.web.api_key
-  sensitive   = true
+output "static_web_app_name" {
+  description = "SWA name for OIDC-authorized runtime retrieval of the deployment token."
+  value       = azurerm_static_web_app.web.name
+}
+
+output "api_image" {
+  value = var.api_image
+}
+
+output "database_jobs" {
+  value = { for name, job in azurerm_container_app_job.database : name => job.name }
+}
+output "release_inputs" {
+  description = "Persisted release selection; ordinary infrastructure plans must preserve these inputs."
+  value = {
+    api_image           = var.api_image
+    migration_image     = var.migration_image
+    application_enabled = var.application_enabled
+  }
 }

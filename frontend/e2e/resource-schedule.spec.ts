@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/test';
 import AxeBuilder from '@axe-core/playwright';
 import { fetchLiveResources, fetchLiveSchedule, NON_EXISTENT_RESOURCE_ID } from './support/api';
 

@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   ResourceListRoute,
   ResourceScheduleRoute,
@@ -100,6 +101,13 @@ function App() {
       </header>
 
       <main ref={mainRef} className="mx-auto max-w-3xl px-4 py-6">
+        <Alert role="note" className="mb-4">
+          <AlertTitle>Public demo</AlertTitle>
+          <AlertDescription>
+            Synthetic data only. Everyone acts as the same demo person and can change shared bookings.
+            Do not enter personal or confidential information.
+          </AlertDescription>
+        </Alert>
         <Routes>
           <Route path="/" element={<Navigate to="/resources" replace />} />
           <Route path="/resources" element={<ResourceListRoute />} />

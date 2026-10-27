@@ -3,13 +3,14 @@ version: 1.0.0
 description: APM project for bookit-hamburg-momme
 author: Momme Ristow
 targets:
-- copilot
+  - copilot
 dependencies:
   apm:
-  - PRODYNA/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-writer.agent.md
-  - PRODYNA/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-reviewer.agent.md
-  - PRODYNA/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-planner.agent.md
-  - PRODYNA/agentic-sdlc-infrastructure/skills/adr-writing
+    - prodyna.ghe.com/PRODYNA/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-writer.agent.md
+    - prodyna.ghe.com/PRODYNA/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-reviewer.agent.md
+    - prodyna.ghe.com/PRODYNA/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-planner.agent.md
+    - prodyna.ghe.com/PRODYNA/agentic-sdlc-infrastructure/skills/adr-writing
+    - prodyna.ghe.com/PRODYNA/agentic-sdlc-infrastructure/skills/pipelines
   mcp: []
 includes: auto
 scripts: {}

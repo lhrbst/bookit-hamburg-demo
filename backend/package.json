@@ -5,13 +5,21 @@
   "description": "Express + TypeScript JSON REST API for the resource-booking application (ADR-002).",
   "type": "commonjs",
   "main": "dist/server.js",
+  "engines": {
+    "node": ">=22 <25"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint \"src/**/*.ts\"",
-    "test": "vitest run"
+    "lint": "eslint \"src/**/*.ts\" \"test-support/**/*.ts\" && node --check scripts/database.mjs",
+    "test": "vitest run --exclude 'src/db/*.test.ts'",
+    "test:integration": "vitest run src/db/*.test.ts",
+    "db:provision": "node scripts/database.mjs provision",
+    "db:migrate": "node scripts/database.mjs migrate",
+    "db:seed:dev": "node scripts/database.mjs seed:dev",
+    "db:seed:test": "node scripts/database.mjs seed:test"
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.4.4",
@@ -19,6 +27,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "pg": "^8.12.0",
+    "node-pg-migrate": "9.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -34,4 +43,3 @@
     "vitest": "^2.0.5"
   }
 }
-

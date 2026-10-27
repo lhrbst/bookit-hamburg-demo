@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/test';
 import AxeBuilder from '@axe-core/playwright';
 import {
   fetchLiveTodayBookings,
@@ -180,27 +180,22 @@ test.describe('today overview route (/today)', () => {
     request,
   }) => {
     await withTodayLock(async () => {
-      // Randomised anchor/gap (rather than fixed offsets) so this test never
-      // collides with itself across parallel workers/repeated runs — it
-      // must still land well before midnight, so the range stays inside
-      // "the rest of today" (see the currentBerlinHour guard on the
-      // continuation-label test below for the same concern).
-      const randomAnchor = 20 + Math.floor(Math.random() * 700); // 20–719 minutes from now
-      const randomGap = 60 + Math.floor(Math.random() * 90); // 60–149 minutes between A and B
+      const anchor = 20;
+      const gap = 90;
 
       const bookingA = await createLiveBooking(request, {
         resourceId: NEBEL_ID,
         bookedForId: ALEX_ID,
         purposeId: 'Meeting',
-        start: futureBerlinLocal(randomAnchor).local,
-        end: futureBerlinLocal(randomAnchor + 20).local,
+        start: futureBerlinLocal(anchor).local,
+        end: futureBerlinLocal(anchor + 20).local,
       });
       const bookingB = await createLiveBooking(request, {
         resourceId: ELBE_ID,
         bookedForId: BRIGITTE_ID,
         purposeId: 'Focus work',
-        start: futureBerlinLocal(randomAnchor + randomGap).local,
-        end: futureBerlinLocal(randomAnchor + randomGap + 20).local,
+        start: futureBerlinLocal(anchor + gap).local,
+        end: futureBerlinLocal(anchor + gap + 20).local,
       });
 
       try {

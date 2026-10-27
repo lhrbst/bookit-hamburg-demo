@@ -1,17 +1,21 @@
-/**
- * Centralised frontend configuration.
- *
- * Vite exposes `VITE_`-prefixed variables via `import.meta.env`. This is
- * the only place that reads them; components and `src/lib` helpers import
- * `config` instead of touching `import.meta.env` directly, so there is a
- * single place to audit for hardcoded environment URLs.
- */
+import { validateRuntimeConfig } from '../runtime-config.mjs';
+
 export interface FrontendConfig {
   /** Base URL of the backend REST API. */
   apiBaseUrl: string;
 }
 
-export const config: FrontendConfig = {
-  apiBaseUrl: import.meta.env['VITE_API_BASE_URL'] ?? 'http://localhost:3001',
-};
+let loaded: FrontendConfig | undefined;
 
+export async function loadRuntimeConfig(): Promise<void> {
+  const response = await fetch('/config.json', { cache: 'no-store', signal: AbortSignal.timeout(10_000) });
+  if (!response.ok) throw new Error(`Runtime configuration request failed (${response.status}).`);
+  loaded = validateRuntimeConfig(await response.json());
+}
+
+export const config: FrontendConfig = {
+  get apiBaseUrl() {
+    if (!loaded) throw new Error('Runtime configuration has not been loaded.');
+    return loaded.apiBaseUrl;
+  },
+};

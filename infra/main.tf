@@ -66,7 +66,7 @@ resource "azurerm_key_vault" "this" {
 resource "azurerm_role_assignment" "deployer_key_vault_secrets" {
   scope                = azurerm_key_vault.this.id
   role_definition_name = "Key Vault Secrets Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
+  principal_id         = var.operator_object_id
 }
 
 resource "azurerm_key_vault_secret" "postgres_admin_password" {
@@ -102,6 +102,10 @@ resource "azurerm_postgresql_flexible_server" "this" {
   authentication {
     active_directory_auth_enabled = false
     password_auth_enabled         = true
+  }
+  lifecycle {
+    # Preserve Azure's assigned zone during unrelated application releases.
+    ignore_changes = [zone]
   }
 }
 
@@ -163,6 +167,10 @@ resource "azurerm_container_app_environment" "this" {
   resource_group_name        = data.azurerm_resource_group.this.name
   log_analytics_workspace_id = azurerm_log_analytics_workspace.this.id
   tags                       = local.tags
+  workload_profile {
+    name                  = "Consumption"
+    workload_profile_type = "Consumption"
+  }
 }
 
 resource "azurerm_container_app" "api" {
@@ -170,20 +178,26 @@ resource "azurerm_container_app" "api" {
   container_app_environment_id = azurerm_container_app_environment.this.id
   resource_group_name          = data.azurerm_resource_group.this.name
   revision_mode                = "Single"
+  workload_profile_name        = "Consumption"
   tags                         = local.tags
 
   identity {
-    type = "SystemAssigned"
+    type         = "SystemAssigned, UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.workload["api"].id]
   }
 
-  secret {
-    name  = "database-url"
-    value = local.database_url
+  dynamic "secret" {
+    for_each = var.application_enabled ? [1] : []
+    content {
+      name                = "database-url"
+      identity            = azurerm_user_assigned_identity.workload["api"].id
+      key_vault_secret_id = azurerm_key_vault_secret.role_url["runtime"].versionless_id
+    }
   }
 
   ingress {
     external_enabled = true
-    target_port      = var.api_port
+    target_port      = var.application_enabled ? var.api_port : 80
     transport        = "auto"
 
     traffic_weight {
@@ -213,13 +227,21 @@ resource "azurerm_container_app" "api" {
       }
 
       env {
+        name  = "CURRENT_PERSON_ID"
+        value = "22222222-2222-2222-2222-222222222221"
+      }
+
+      env {
         name  = "CORS_ORIGIN"
         value = "https://${azurerm_static_web_app.web.default_host_name}"
       }
 
-      env {
-        name        = "DATABASE_URL"
-        secret_name = "database-url"
+      dynamic "env" {
+        for_each = var.application_enabled ? [1] : []
+        content {
+          name        = "DATABASE_URL"
+          secret_name = "database-url"
+        }
       }
 
       env {
@@ -229,9 +251,35 @@ resource "azurerm_container_app" "api" {
 
       liveness_probe {
         transport = "HTTP"
-        path      = "/health"
-        port      = var.api_port
+        path      = var.application_enabled ? "/health" : "/"
+        port      = var.application_enabled ? var.api_port : 80
       }
+
+      dynamic "startup_probe" {
+        for_each = var.application_enabled ? [1] : []
+        content {
+          transport = "HTTP"
+          path      = "/health"
+          port      = var.api_port
+        }
+      }
+
+      dynamic "readiness_probe" {
+        for_each = var.application_enabled ? [1] : []
+        content {
+          transport = "HTTP"
+          path      = "/ready"
+          port      = var.api_port
+        }
+      }
+    }
+  }
+  depends_on = [azurerm_role_assignment.workload_secret]
+
+  lifecycle {
+    precondition {
+      condition     = !var.application_enabled || (var.migration_image != null && startswith(var.api_image, "ghcr.io/"))
+      error_message = "Enable the application only with published public GHCR API and migration digests."
     }
   }
 }

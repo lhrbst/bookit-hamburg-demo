@@ -1,0 +1,146 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: validate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16-bookworm@sha256:d81f7b51697014367236d07ec58b54153fc28f828b72bf247fe5c7487520bcb0
+        env:
+          POSTGRES_USER: bookit
+          POSTGRES_PASSWORD: ci-disposable-only
+          POSTGRES_DB: bookit
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U bookit -d bookit"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_ADMIN_URL: postgres://bookit:ci-disposable-only@localhost:5432/bookit
+      MIGRATION_DATABASE_URL: postgres://bookit_migrator:ci-migrator-only@localhost:5432/bookit
+      RUNTIME_DATABASE_URL: postgres://bookit_runtime:ci-runtime-only@localhost:5432/bookit
+      DATABASE_URL: postgres://bookit_runtime:ci-runtime-only@localhost:5432/bookit
+      SOURCE_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version_file: .opentofu-version
+          tofu_wrapper: false
+      - name: Install locked dependencies
+        run: |
+          npm --prefix backend ci --no-audit --no-fund
+          npm --prefix frontend ci --no-audit --no-fund
+      - name: Lint, typecheck and offline infrastructure checks
+        run: |
+          node scripts/lint-workflows.mjs
+          npm --prefix backend run lint
+          npm --prefix frontend run lint
+          npm --prefix backend run typecheck
+          npm --prefix frontend run typecheck
+          tofu -chdir=infra fmt -check -recursive
+          tofu -chdir=infra init -backend=false -lockfile=readonly -input=false
+          tofu -chdir=infra validate
+          tofu -chdir=infra/bootstrap init -backend=false -lockfile=readonly -input=false
+          tofu -chdir=infra/bootstrap validate
+      - name: Build environment-independent artifacts once
+        run: |
+          npm --prefix backend run build
+          npm --prefix frontend run build
+          mkdir -p .local/frontend-release .local/backend-images
+          cp -R frontend/dist .local/frontend-release/site
+          docker build --platform linux/amd64 --target api -t bookit-api:validated backend
+          docker build --platform linux/amd64 --target migrations -t bookit-migrations:validated backend
+          docker save -o .local/backend-images/images.tar bookit-api:validated bookit-migrations:validated
+          node scripts/release-artifact.mjs create .local/frontend-release
+          node scripts/release-artifact.mjs create .local/backend-images
+      - name: Unit and delivery policy tests
+        run: |
+          npm --prefix backend test
+          node --test scripts/*.test.mjs
+      - name: Block vulnerable runtime dependencies
+        run: |
+          npm --prefix backend audit --omit=dev --audit-level=high
+          npm --prefix frontend audit --omit=dev --audit-level=high
+      - name: Apply migrations and run mandatory PostgreSQL integration
+        run: |
+          npm --prefix backend run db:provision
+          npm --prefix backend run db:migrate
+          npm --prefix backend run db:seed:dev
+          DATABASE_URL="$MIGRATION_DATABASE_URL" npm --prefix backend run test:integration
+      - name: Exercise the exact production images
+        env:
+          VERIFY_API_IMAGE: bookit-api:validated
+          VERIFY_MIGRATION_IMAGE: bookit-migrations:validated
+        run: node scripts/verify-local.mjs
+      - name: Playwright against the production frontend artifact
+        env:
+          ALLOW_TEST_SEED: 'true'
+          API_BASE_URL: http://localhost:3001
+        run: |
+          npm --prefix backend run db:seed:test
+          npm --prefix frontend exec -- playwright install --with-deps chromium
+          npm --prefix frontend run configure -- dist
+          npm --prefix frontend run test:e2e
+      - name: Retain browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-${{ github.run_id }}
+          path: |
+            .local/playwright-results.xml
+            .local/playwright-report/
+            .local/playwright-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-release
+          path: .local/frontend-release/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-images
+          path: .local/backend-images/
+          include-hidden-files: true
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+  validate:
+    if: always()
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Require every validation check to succeed
+        env:
+          RESULT: ${{ needs.checks.result }}
+        run: test "$RESULT" = success

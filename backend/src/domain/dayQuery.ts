@@ -1,6 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { ValidationError } from './errors';
 import { dayBounds, type DayBounds } from './dayClipping';
+import { now } from './clock';
 
 /**
  * Shared `date` query-parameter parsing for every "bookings on a calendar
@@ -17,7 +18,7 @@ const DATE_SHAPE = /^\d{4}-\d{2}-\d{2}$/;
 
 function parseDate(raw: string | undefined): Temporal.PlainDate {
   if (raw === undefined) {
-    return Temporal.Now.plainDateISO('Europe/Berlin');
+    return now().toZonedDateTimeISO('Europe/Berlin').toPlainDate();
   }
 
   if (!DATE_SHAPE.test(raw)) {

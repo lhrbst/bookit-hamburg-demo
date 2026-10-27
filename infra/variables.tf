@@ -50,9 +50,34 @@ variable "database_admin_login" {
 }
 
 variable "api_image" {
-  description = "Container image for the Express API. The default is a placeholder until CI pushes the real image."
+  description = "Persisted immutable release image. No default: every plan must load the current release inputs."
   type        = string
-  default     = "mcr.microsoft.com/k8se/quickstart:latest"
+  validation {
+    condition     = can(regex("@sha256:[0-9a-f]{64}$", var.api_image))
+    error_message = "api_image must be pinned by digest."
+  }
+}
+
+variable "application_enabled" {
+  description = "False only during initial placeholder preparation; true once the real API has been published and migrated."
+  type        = bool
+  default     = false
+}
+
+variable "migration_image" {
+  description = "Published public GHCR migrations image digest. Null keeps jobs absent until the first image is published."
+  type        = string
+  default     = null
+  nullable    = true
+  validation {
+    condition     = var.migration_image == null ? true : can(regex("^ghcr.io/.+@sha256:[0-9a-f]{64}$", var.migration_image))
+    error_message = "migration_image must be a public GHCR image pinned by digest."
+  }
+}
+
+variable "operator_object_id" {
+  description = "Stable operator object ID that already owns the infrastructure secret grant; provide via TF_VAR_operator_object_id, not the current CI caller."
+  type        = string
 }
 
 variable "api_port" {

@@ -2,6 +2,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { ValidationError, type FieldError } from './errors';
 import { isValidPurpose } from './purposes';
 import { parseBerlinLocalDateTime } from './datetime';
+import { now } from './clock';
 
 /**
  * Booking validity rules (FS-02 FR-2, R-1 to R-4; FR-4; AC-3/AC-4/AC-5/
@@ -170,8 +171,8 @@ export function validateBookingInput(input: BookingRuleInput): ValidatedBooking 
   // value captured earlier (e.g. at module load or form open), so a form
   // left open until its start time passes still fails here.
   if (startZoned) {
-    const now = Temporal.Now.zonedDateTimeISO('Europe/Berlin');
-    if (Temporal.ZonedDateTime.compare(startZoned, now) < 0) {
+    const currentTime = now().toZonedDateTimeISO('Europe/Berlin');
+    if (Temporal.ZonedDateTime.compare(startZoned, currentTime) < 0) {
       fieldErrors.push({
         field: 'start',
         rule: 'not-in-past',

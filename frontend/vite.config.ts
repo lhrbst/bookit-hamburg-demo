@@ -2,6 +2,7 @@ import path from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { validateRuntimeConfig } from './runtime-config.mjs';
 
 /**
  * Vite config. The dev server port and the backend origin it proxies to
@@ -12,7 +13,22 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        name: 'local-runtime-configuration',
+        apply: 'serve',
+        configureServer(server) {
+          const value = validateRuntimeConfig({ apiBaseUrl: env.API_BASE_URL ?? 'http://localhost:3001' });
+          server.middlewares.use('/config.json', (_req, res) => {
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Cache-Control', 'no-store');
+            res.end(JSON.stringify(value));
+          });
+        },
+      },
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -20,6 +36,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: Number(env.VITE_PORT) || 5173,
+      strictPort: true,
     },
   };
 });

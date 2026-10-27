@@ -19,6 +19,8 @@ module.exports = {
   rules: {
     'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
   },
-  ignorePatterns: ['dist/', 'node_modules/'],
+  ignorePatterns: ['dist/', 'node_modules/', 'playwright-report/', 'test-results/'],
+  overrides: [
+    { files: ['*.cjs', '*.mjs', 'scripts/**/*.mjs', 'e2e/**/*.ts', '*.config.ts'], env: { node: true } },
+  ],
 };
-

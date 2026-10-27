@@ -1,4 +1,4 @@
 environment         = "dev"
-resource_group_name = "rg-Momme-Ristow"
+resource_group_name = "rg-Herbst-Lukas"
 location            = "northeurope"
 web_location        = "westeurope"
