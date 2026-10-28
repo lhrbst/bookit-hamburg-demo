@@ -2,6 +2,37 @@ variable "github_repository" {
   description = "Repository trusted for the dev GitHub environment."
   type        = string
   default     = "lhrbst/bookit-hamburg-demo"
+
+  validation {
+    condition     = length(split("/", var.github_repository)) == 2
+    error_message = "Set github_repository to exactly OWNER/REPOSITORY."
+  }
+}
+
+variable "github_owner_id" {
+  description = "Immutable numeric GitHub owner ID used in the OIDC subject."
+  type        = string
+  default     = "11369059"
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_owner_id))
+    error_message = "github_owner_id must be a numeric GitHub ID."
+  }
+}
+
+variable "github_repository_id" {
+  description = "Immutable numeric GitHub repository ID used in the OIDC subject."
+  type        = string
+  default     = "1435727324"
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_repository_id))
+    error_message = "github_repository_id must be a numeric GitHub ID."
+  }
+}
+
+locals {
+  github_repository_parts = split("/", var.github_repository)
 }
 
 data "azurerm_resource_group" "application" {
@@ -24,7 +55,7 @@ resource "azurerm_federated_identity_credential" "github_dev" {
   user_assigned_identity_id = azurerm_user_assigned_identity.github_dev.id
   audience                  = ["api://AzureADTokenExchange"]
   issuer                    = "https://token.actions.githubusercontent.com"
-  subject                   = "repo:${var.github_repository}:environment:dev"
+  subject                   = "repo:${local.github_repository_parts[0]}@${var.github_owner_id}/${local.github_repository_parts[1]}@${var.github_repository_id}:environment:dev"
 }
 
 resource "azurerm_role_assignment" "github_resources" {

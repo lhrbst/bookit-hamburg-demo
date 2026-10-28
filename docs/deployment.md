@@ -60,7 +60,7 @@ The established dev environment already has these configured.
 No Azure client secret or SWA token is stored in GitHub.
 
 The only federated subject is
-`repo:lhrbst/bookit-hamburg-demo:environment:dev`. The destructive-approval
+`repo:lhrbst@11369059/bookit-hamburg-demo@1435727324:environment:dev`. The destructive-approval
 job must have no Azure access; once approved, the privileged apply job runs
 in `dev`. The approval environment does not have a federated identity.
 
