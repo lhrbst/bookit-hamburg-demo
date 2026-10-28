@@ -1,0 +1,25 @@
+{
+  "skill_name": "pipelines",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a GitHub Actions workflow that runs tofu fmt, validate and plan for the infra/ directory on pull requests, logging in to Azure first.",
+      "expected_output": "A workflow under .github/workflows/ named for its purpose, with an explicit permissions block, OIDC login and SHA-pinned actions.",
+      "assertions": [
+        "The workflow file is under .github/workflows/ and its name says what it does, not what triggers it",
+        "Azure login uses OIDC with id-token: write and no client secret",
+        "Third-party actions are pinned to a commit SHA, or the response says explicitly that they must be",
+        "permissions are set explicitly at workflow or job level"
+      ]
+    },
+    {
+      "id": 2,
+      "trigger": "must-not",
+      "prompt": "Write a bash script that runs tofu fmt and tofu validate locally before I commit.",
+      "expected_output": "A local script or pre-commit hook; no pipeline is involved.",
+      "assertions": [
+        "A shell script or pre-commit configuration was written"
+      ]
+    }
+  ]
+}
