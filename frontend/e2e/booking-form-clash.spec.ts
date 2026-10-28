@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Locator, type APIRequestContext } from '@playwright/test';
+import { test, expect, type Page, type Locator, type APIRequestContext } from './support/test';
 import AxeBuilder from '@axe-core/playwright';
 import {
   fetchLiveResources,

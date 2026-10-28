@@ -13,10 +13,11 @@ import { parseDayBounds } from './dayQuery';
  * the route handler resolves (and 404s on) separately.
  */
 
+// PostgreSQL accepts UUID-shaped values without RFC version/variant bits.
 const QuerySchema = z.object({
   date: z.string().optional(),
-  bookedById: z.string().uuid('bookedById must be a valid identifier.').optional(),
-  bookedForId: z.string().uuid('bookedForId must be a valid identifier.').optional(),
+  bookedById: z.guid('bookedById must be a valid identifier.').optional(),
+  bookedForId: z.guid('bookedForId must be a valid identifier.').optional(),
 });
 
 export interface ScheduleQueryFilters {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/test';
 import AxeBuilder from '@axe-core/playwright';
 import { fetchLiveResources } from './support/api';
 
@@ -141,6 +141,7 @@ test.describe('resource schedule day navigation (/resources/:resourceId/schedule
     // date would very likely disagree with Berlin's.
     const context = await browser.newContext({ timezoneId: 'Pacific/Kiritimati' });
     const page = await context.newPage();
+    await page.clock.setFixedTime(new Date());
 
     await page.goto(`/resources/${resource.id}/schedule/not-a-date`);
 

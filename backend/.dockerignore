@@ -1,0 +1,13 @@
+**
+!package.json
+!package-lock.json
+!tsconfig*.json
+!src/
+!src/**
+!migrations/
+!migrations/*.sql
+!seeds/
+!seeds/*.sql
+!scripts/
+!scripts/database.mjs
+src/**/*.test.ts

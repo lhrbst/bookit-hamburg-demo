@@ -24,23 +24,8 @@ import { ConflictError } from '../domain/errors';
  * only prove that our mock behaves the way we already assume; it would
  * not prove the constraint.
  *
- * ## Skip behaviour
- *
- * If no reachable PostgreSQL instance is configured (`DATABASE_URL`
- * unset/unreachable), this file skips itself gracefully rather than
- * failing hard — following the project's existing conventions of never
- * letting infra be a false negative for behaviour tests. There is no
- * established repo pattern for this yet (this is the first "needs a live
- * database" test in the codebase), so this establishes one: `beforeAll`
- * probes connectivity once with a plain `SELECT 1` and records the
- * result; each `it` checks that result first and calls vitest's `ctx.skip()`
- * if the database is unreachable, rather than letting every query in the
- * body throw and fail the suite. (`describe.skipIf`/`it.skipIf` need
- * their condition synchronously at collection time and this project's
- * `tsconfig` targets `commonjs`, which additionally forbids the top-level
- * `await` that would otherwise be needed to compute the condition, so
- * `ctx.skip()` inside each test is the correct mechanism here, not those
- * static skip helpers.)
+ * Run with `npm run test:integration`. PostgreSQL must be reachable and
+ * migrated; missing infrastructure fails this mandatory check (ADR-004).
  *
  * ## Isolation
  *
@@ -74,32 +59,9 @@ const TEMP_RESOURCE_A = 'aaaaaaaa-0000-4000-8000-000000000001';
 const TEMP_RESOURCE_B = 'aaaaaaaa-0000-4000-8000-000000000002';
 const TEMP_PERSON = 'bbbbbbbb-0000-4000-8000-000000000001';
 
-async function isDatabaseReachable(): Promise<boolean> {
-  try {
-    await pool.query('SELECT 1');
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Whether a real database was reachable, decided once before any test
- * runs. `describe`/`it` bodies below are synchronous at collection time,
- * so this cannot be a top-level `await` (and this project's `tsconfig`
- * targets `commonjs`, which disallows one); instead `beforeAll` probes
- * the database and every test bails out early via `ctx.skip()` when it
- * is unreachable, which is vitest's supported way to skip based on an
- * async precondition.
- */
-let dbReachable = true;
-
 describe('createBooking concurrency (issue #49)', () => {
   beforeAll(async () => {
-    dbReachable = await isDatabaseReachable();
-    if (!dbReachable) {
-      return;
-    }
+    await pool.query('SELECT 1');
     await pool.query(
       `INSERT INTO resource (id, name, description, type) VALUES
          ($1, 'concurrency-test-resource-a', 'temp fixture for issue #49', 'room'),
@@ -113,9 +75,6 @@ describe('createBooking concurrency (issue #49)', () => {
   });
 
   afterAll(async () => {
-    if (!dbReachable) {
-      return;
-    }
     await pool.query('DELETE FROM booking WHERE resource_id = ANY($1::uuid[])', [
       [TEMP_RESOURCE_A, TEMP_RESOURCE_B],
     ]);
@@ -155,11 +114,7 @@ describe('createBooking concurrency (issue #49)', () => {
     };
   }
 
-  it('AC: exactly one of two overlapping concurrent creations on the same resource succeeds, the loser gets a clash ConflictError with a range, and the DB shows exactly one row — repeated across iterations for confidence', async (ctx) => {
-    if (!dbReachable) {
-      ctx.skip();
-      return;
-    }
+  it('AC: exactly one of two overlapping concurrent creations on the same resource succeeds, the loser gets a clash ConflictError with a range, and the DB shows exactly one row — repeated across iterations for confidence', async () => {
     for (let i = 0; i < 8; i += 1) {
       // Fresh, mutually non-conflicting slot per iteration so earlier
       // iterations' surviving bookings cannot interfere with later ones.
@@ -202,11 +157,7 @@ describe('createBooking concurrency (issue #49)', () => {
     }
   }, 30_000);
 
-  it('AC: concurrent back-to-back (touching) creations on the same resource both succeed', async (ctx) => {
-    if (!dbReachable) {
-      ctx.skip();
-      return;
-    }
+  it('AC: concurrent back-to-back (touching) creations on the same resource both succeed', async () => {
     const start = '2027-02-01T09:00:00+01:00';
     const middle = '2027-02-01T10:00:00+01:00';
     const end = '2027-02-01T11:00:00+01:00';
@@ -223,11 +174,7 @@ describe('createBooking concurrency (issue #49)', () => {
     expect(count).toBe(2);
   });
 
-  it('AC: concurrent creations on DIFFERENT resources (same/overlapping time) both succeed and do not block each other', async (ctx) => {
-    if (!dbReachable) {
-      ctx.skip();
-      return;
-    }
+  it('AC: concurrent creations on DIFFERENT resources (same/overlapping time) both succeed and do not block each other', async () => {
     const start = '2027-03-01T09:00:00+01:00';
     const end = '2027-03-01T10:00:00+01:00';
 

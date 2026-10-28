@@ -12,10 +12,13 @@ import { config } from '../config';
  * - An unhandled `'error'` event on the pool (e.g. an idle client dropped by
  *   the server) crashes the process, so it must always be listened for.
  */
-export const pool = new Pool({ connectionString: config.databaseUrl });
+export const pool = new Pool({
+  connectionString: config.databaseUrl,
+  connectionTimeoutMillis: 5_000,
+  statement_timeout: 10_000,
+});
 
 pool.on('error', (err) => {
   // eslint-disable-next-line no-console
   console.error('Unexpected error on idle PostgreSQL client', err);
 });
-

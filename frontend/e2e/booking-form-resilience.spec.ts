@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Locator, type APIRequestContext } from '@playwright/test';
+import { test, expect, setTestTime, type Page, type Locator, type APIRequestContext } from './support/test';
 import AxeBuilder from '@axe-core/playwright';
 import {
   fetchLiveResources,
@@ -199,13 +199,7 @@ test.describe('booking form resilience — issue #46', () => {
     const me = await fetchLiveMe(request);
     const purposes = await fetchLivePurposes(request);
 
-    // The very next whole-minute boundary (plus a 2s buffer so it is
-    // unambiguously still in the future right now) — a `datetime-local`
-    // input has no seconds, so this is the SOONEST a start value can be
-    // "in the future" and later become "in the past" by real time
-    // passing, keeping this test's own real-clock wait as short as
-    // possible (worst case just over a minute) rather than needlessly
-    // padding it.
+    // datetime-local has minute precision; start just after the fixed clock.
     const startInstantMs = Math.ceil((Date.now() + 2_000) / 60_000) * 60_000;
     const startDate = new Date(startInstantMs);
     const endDate = new Date(startInstantMs + 5 * 60_000);
@@ -220,10 +214,10 @@ test.describe('booking form resilience — issue #46', () => {
     // open past its start time", it would just be an already-past entry.
     expect(Date.now()).toBeLessThan(startInstantMs);
 
-    // Wait for real wall-clock time to cross the entered start minute —
-    // the form stays open, untouched, exactly as a user who filled it in
-    // and was then interrupted would leave it.
-    await expect.poll(() => Date.now() > startInstantMs, { timeout: 75_000, intervals: [1000] }).toBe(true);
+    // Advance the injected API clock and browser together, leaving the form untouched.
+    const later = new Date(startInstantMs + 1_000);
+    setTestTime(later);
+    await page.clock.setFixedTime(later);
 
     await page.getByRole('button', { name: 'Book this resource' }).click();
 

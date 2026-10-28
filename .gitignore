@@ -8,6 +8,8 @@ build/
 # Environment & secrets
 .env
 .env.*
+!.env.example
+!**/.env.example
 
 # OS & editor files
 .DS_Store
@@ -25,4 +27,11 @@ infra/**/*.tfstate.*
 infra/**/*.tfplan
 infra/**/*.auto.tfvars
 infra/environments/*.backend.hcl
+infra/bootstrap/backend.hcl
 crash.log*
+
+# Local deployment/test output
+.local/
+frontend/playwright-report/
+frontend/test-results/
+frontend/*.tsbuildinfo

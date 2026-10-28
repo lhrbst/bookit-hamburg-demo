@@ -1,0 +1,7 @@
+# Activate only after the bootstrap plan is approved and applied.
+# Back up local state, copy this to backend.tf, and approve init -migrate-state.
+terraform {
+  backend "azurerm" {
+    use_azuread_auth = true
+  }
+}

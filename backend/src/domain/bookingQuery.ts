@@ -17,11 +17,12 @@ import { parseDayBounds } from './dayQuery';
  * is specific to the cross-resource overview.
  */
 
+// PostgreSQL accepts UUID-shaped values without RFC version/variant bits.
 const QuerySchema = z.object({
   date: z.string().optional(),
-  resourceId: z.string().uuid('resourceId must be a valid identifier.').optional(),
-  bookedById: z.string().uuid('bookedById must be a valid identifier.').optional(),
-  bookedForId: z.string().uuid('bookedForId must be a valid identifier.').optional(),
+  resourceId: z.guid('resourceId must be a valid identifier.').optional(),
+  bookedById: z.guid('bookedById must be a valid identifier.').optional(),
+  bookedForId: z.guid('bookedForId must be a valid identifier.').optional(),
 });
 
 export interface BookingQueryFilters {

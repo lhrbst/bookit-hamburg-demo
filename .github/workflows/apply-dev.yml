@@ -1,0 +1,207 @@
+name: Apply saved dev plan
+
+on:
+  workflow_call:
+    inputs:
+      sha:
+        type: string
+        required: true
+      phase:
+        type: string
+        required: true
+      api_image:
+        type: string
+        required: true
+      migration_image:
+        type: string
+        required: true
+      rollback:
+        type: boolean
+        default: false
+      operator_approval:
+        type: boolean
+        default: false
+    outputs:
+      api_url:
+        value: ${{ jobs.apply.outputs.api_url }}
+      web_url:
+        value: ${{ jobs.apply.outputs.web_url }}
+      swa_name:
+        value: ${{ jobs.apply.outputs.swa_name }}
+      database_jobs:
+        value: ${{ jobs.apply.outputs.database_jobs }}
+      migration_image:
+        value: ${{ jobs.apply.outputs.migration_image }}
+
+permissions: {}
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: 'true'
+      TF_VAR_operator_object_id: ${{ vars.TF_OPERATOR_OBJECT_ID }}
+      TF_STATE_STORAGE_ACCOUNT: ${{ vars.TF_STATE_STORAGE_ACCOUNT }}
+      TF_STATE_CONTAINER: ${{ vars.TF_STATE_CONTAINER }}
+      TF_STATE_KEY: ${{ vars.TF_STATE_KEY }}
+      SOURCE_SHA: ${{ inputs.sha }}
+      PLAN_PHASE: ${{ inputs.phase }}
+      API_IMAGE: ${{ inputs.api_image }}
+      MIGRATION_IMAGE: ${{ inputs.migration_image }}
+      ROLLBACK: ${{ inputs.rollback }}
+    outputs:
+      destructive: ${{ steps.plan.outputs.destructive }}
+      blob_key: ${{ steps.plan.outputs.blob_key }}
+      hash: ${{ steps.plan.outputs.hash }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version_file: .opentofu-version
+          tofu_wrapper: false
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Initialize dev state with Entra OIDC
+        run: |
+          tofu -chdir=infra init -input=false -lockfile=readonly \
+            -backend-config="storage_account_name=$TF_STATE_STORAGE_ACCOUNT" \
+            -backend-config="container_name=$TF_STATE_CONTAINER" \
+            -backend-config="key=$TF_STATE_KEY" \
+            -backend-config=use_azuread_auth=true -backend-config=use_oidc=true
+      - name: Preserve the deployed API until migrations succeed
+        run: |
+          if [ "$PLAN_PHASE" = prepare ]; then unset API_IMAGE APPLICATION_ENABLED; else export APPLICATION_ENABLED=true; fi
+          if [ "$ROLLBACK" = true ]; then unset MIGRATION_IMAGE; fi
+          node scripts/prepare-release.mjs
+          if [ "$ROLLBACK" = true ]; then
+            node --input-type=module -e 'import fs from "node:fs"; const r=JSON.parse(fs.readFileSync(".local/dev.release.tfvars.json")); if(!r.application_enabled || !r.migration_image)throw new Error("No existing migrated release to roll back");'
+          fi
+      - name: Save and privately transfer the exact plan
+        id: plan
+        run: node scripts/private-plan.mjs create
+      - name: Publish non-sensitive review metadata
+        env:
+          KEY: ${{ steps.plan.outputs.blob_key }}
+          HASH: ${{ steps.plan.outputs.hash }}
+          DESTRUCTIVE: ${{ steps.plan.outputs.destructive }}
+        run: |
+          printf 'Phase: %s\n\nPrivate Blob: %s\n\nSHA-256: %s\n\nDestructive: %s\n' \
+            "$PLAN_PHASE" "$KEY" "$HASH" "$DESTRUCTIVE" >> "$GITHUB_STEP_SUMMARY"
+
+  approve:
+    needs: plan
+    if: needs.plan.outputs.destructive == 'true' || inputs.operator_approval
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: dev-destructive
+    permissions: {}
+    steps:
+      - run: echo "The saved plan and any requested database provisioning were explicitly approved."
+
+  apply:
+    needs: [plan, approve]
+    if: >-
+      always() && !cancelled() && needs.plan.result == 'success' &&
+      (needs.approve.result == 'success' || needs.approve.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: 'true'
+      TF_STATE_STORAGE_ACCOUNT: ${{ vars.TF_STATE_STORAGE_ACCOUNT }}
+      TF_STATE_CONTAINER: ${{ vars.TF_STATE_CONTAINER }}
+      TF_STATE_KEY: ${{ vars.TF_STATE_KEY }}
+      SOURCE_SHA: ${{ inputs.sha }}
+      PLAN_PHASE: ${{ inputs.phase }}
+      PLAN_BLOB_KEY: ${{ needs.plan.outputs.blob_key }}
+      PLAN_HASH: ${{ needs.plan.outputs.hash }}
+    outputs:
+      api_url: ${{ steps.apply.outputs.api_url }}
+      web_url: ${{ steps.apply.outputs.web_url }}
+      swa_name: ${{ steps.apply.outputs.swa_name }}
+      database_jobs: ${{ steps.apply.outputs.database_jobs }}
+      migration_image: ${{ steps.apply.outputs.migration_image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version_file: .opentofu-version
+          tofu_wrapper: false
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Initialize the same backend
+        run: |
+          tofu -chdir=infra init -input=false -lockfile=readonly \
+            -backend-config="storage_account_name=$TF_STATE_STORAGE_ACCOUNT" \
+            -backend-config="container_name=$TF_STATE_CONTAINER" \
+            -backend-config="key=$TF_STATE_KEY" \
+            -backend-config=use_azuread_auth=true -backend-config=use_oidc=true
+      - name: Verify the saved plan hash and apply without replanning
+        id: apply
+        run: node scripts/private-plan.mjs apply
+
+  cleanup:
+    needs: [plan, approve, apply]
+    if: always() && needs.plan.outputs.blob_key != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_STATE_STORAGE_ACCOUNT: ${{ vars.TF_STATE_STORAGE_ACCOUNT }}
+      TF_STATE_CONTAINER: ${{ vars.TF_STATE_CONTAINER }}
+      SOURCE_SHA: ${{ inputs.sha }}
+      PLAN_PHASE: ${{ inputs.phase }}
+      PLAN_BLOB_KEY: ${{ needs.plan.outputs.blob_key }}
+      APPLY_RESULT: ${{ needs.apply.result }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - run: node scripts/private-plan.mjs cleanup

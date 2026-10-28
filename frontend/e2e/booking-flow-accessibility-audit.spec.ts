@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Locator } from '@playwright/test';
+import { test, expect, type Page, type Locator } from './support/test';
 import {
   fetchLiveScheduleForDate,
   fetchLiveResources,

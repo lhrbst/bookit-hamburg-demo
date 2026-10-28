@@ -1,8 +1,9 @@
 lockfile_version: '1'
-generated_at: '2026-07-28T11:32:46.097743+00:00'
+generated_at: '2026-10-27T14:10:18.950186+00:00'
 apm_version: 0.23.1
 dependencies:
-- repo_url: PRODYNA/agentic-sdlc-infrastructure
+- repo_url: prodyna/agentic-sdlc-infrastructure
+  materialization_repo_url: PRODYNA/agentic-sdlc-infrastructure
   name: agentic-sdlc-infrastructure-spec-writer
   host: github.com
   resolved_commit: 4b93327921a324f82d6e017a73524fa050e59cf4
@@ -15,7 +16,8 @@ dependencies:
   deployed_file_hashes:
     .github/agents/spec-writer.agent.md: sha256:7a89b9762f8b8e52c118da898953fc806e5ec0c6b43f0bb4f9278ed28703aaa2
   content_hash: sha256:f489cf8f86f80b7ed59d1fbcd687227e1dd0c618c454318bd5411cb321ac8596
-- repo_url: PRODYNA/agentic-sdlc-infrastructure
+- repo_url: prodyna/agentic-sdlc-infrastructure
+  materialization_repo_url: PRODYNA/agentic-sdlc-infrastructure
   name: agentic-sdlc-infrastructure-spec-reviewer
   host: github.com
   resolved_commit: 4b93327921a324f82d6e017a73524fa050e59cf4
@@ -28,7 +30,8 @@ dependencies:
   deployed_file_hashes:
     .github/agents/spec-reviewer.agent.md: sha256:ba96a8bdb69198038fdad8abade946889c5cadb41d4c1aadaa4ef3d6edf6bc1b
   content_hash: sha256:5a91274f88f1e43f62437a740a8229d5b3fe69094065027ba0427c6e1a37f59a
-- repo_url: PRODYNA/agentic-sdlc-infrastructure
+- repo_url: prodyna/agentic-sdlc-infrastructure
+  materialization_repo_url: PRODYNA/agentic-sdlc-infrastructure
   name: agentic-sdlc-infrastructure-spec-planner
   host: github.com
   resolved_commit: 4b93327921a324f82d6e017a73524fa050e59cf4
@@ -41,7 +44,8 @@ dependencies:
   deployed_file_hashes:
     .github/agents/spec-planner.agent.md: sha256:db02406f013ec7f02eb362d33498f7ed6e36cd8ae98184069ea5ff19d502b06d
   content_hash: sha256:3f81c20c81eff1bd53ec97d7a9121d7cbf56dc8cba518abe8a2f22f9a57cda5e
-- repo_url: PRODYNA/agentic-sdlc-infrastructure
+- repo_url: prodyna/agentic-sdlc-infrastructure
+  materialization_repo_url: PRODYNA/agentic-sdlc-infrastructure
   name: agentic-sdlc-infrastructure
   host: github.com
   resolved_commit: 4b93327921a324f82d6e017a73524fa050e59cf4
@@ -59,3 +63,77 @@ dependencies:
     .agents/skills/adr-writing/references/adr-template.md: sha256:c7d83a90b53ffd639e053413047f19214936785617af9b45973f1722a20219bf
     .agents/skills/adr-writing/references/when-to-write.md: sha256:07994b28e300e4f280cccc0b5d6353863e077bf88fb733c48baf53423573b218
   content_hash: sha256:19a7b835e43b303aae729ddd4c5e603b5a7ac22d2b811ca06ecc46f39cd49abc
+- repo_url: prodyna/agentic-sdlc-infrastructure
+  materialization_repo_url: PRODYNA/agentic-sdlc-infrastructure
+  name: pipelines
+  host: prodyna.ghe.com
+  resolved_commit: 23125df69816e746763ac97d14315876f903b5d5
+  version: unknown
+  virtual_path: skills/pipelines
+  is_virtual: true
+  package_type: claude_skill
+  content_hash: sha256:dfe91ab7173831748c98d9638fa1b7e806a1e825227fdcb3687f34a3b5515b88
+deployments:
+- kind: project-relative
+  target: copilot
+  value: .github/agents/spec-planner.agent.md
+  runtime: null
+  scope: project
+  owners:
+  - prodyna/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-planner.agent.md
+  active_owner: prodyna/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-planner.agent.md
+  content_hash: sha256:db02406f013ec7f02eb362d33498f7ed6e36cd8ae98184069ea5ff19d502b06d
+- kind: project-relative
+  target: copilot
+  value: .github/agents/spec-reviewer.agent.md
+  runtime: null
+  scope: project
+  owners:
+  - prodyna/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-reviewer.agent.md
+  active_owner: prodyna/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-reviewer.agent.md
+  content_hash: sha256:ba96a8bdb69198038fdad8abade946889c5cadb41d4c1aadaa4ef3d6edf6bc1b
+- kind: project-relative
+  target: copilot
+  value: .github/agents/spec-writer.agent.md
+  runtime: null
+  scope: project
+  owners:
+  - prodyna/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-writer.agent.md
+  active_owner: prodyna/agentic-sdlc-infrastructure/agents/orchestration/spec-driven-dev/spec-writer.agent.md
+  content_hash: sha256:7a89b9762f8b8e52c118da898953fc806e5ec0c6b43f0bb4f9278ed28703aaa2
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/adr-writing
+  runtime: null
+  scope: project
+  owners:
+  - prodyna/agentic-sdlc-infrastructure/skills/adr-writing
+  active_owner: prodyna/agentic-sdlc-infrastructure/skills/adr-writing
+  content_hash: null
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/adr-writing/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - prodyna/agentic-sdlc-infrastructure/skills/adr-writing
+  active_owner: prodyna/agentic-sdlc-infrastructure/skills/adr-writing
+  content_hash: sha256:9b0288a1bac48857251731bce30fb1827747874176d1a804d9454663042a6b7e
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/adr-writing/references/adr-template.md
+  runtime: null
+  scope: project
+  owners:
+  - prodyna/agentic-sdlc-infrastructure/skills/adr-writing
+  active_owner: prodyna/agentic-sdlc-infrastructure/skills/adr-writing
+  content_hash: sha256:c7d83a90b53ffd639e053413047f19214936785617af9b45973f1722a20219bf
+- kind: project-relative
+  target: legacy
+  value: .agents/skills/adr-writing/references/when-to-write.md
+  runtime: null
+  scope: project
+  owners:
+  - prodyna/agentic-sdlc-infrastructure/skills/adr-writing
+  active_owner: prodyna/agentic-sdlc-infrastructure/skills/adr-writing
+  content_hash: sha256:07994b28e300e4f280cccc0b5d6353863e077bf88fb733c48baf53423573b218

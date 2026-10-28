@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Locator, type APIRequestContext } from '@playwright/test';
+import { test, expect, type Page, type Locator, type APIRequestContext } from './support/test';
 import AxeBuilder from '@axe-core/playwright';
 import {
   fetchLiveResources,
@@ -491,7 +491,7 @@ test.describe('booking form (/resources/:resourceId/book) — issue #40', () => 
     await expect(page.getByRole('listbox')).toHaveCount(0);
     await expect(purpose).toContainText(purposes[0].label);
 
-    await page.keyboard.press('Tab');
+    await tabUntilFocused(page, startInput);
     await expect(startInput).toBeFocused();
     // Native `datetime-local` inputs are typeable via keyboard, but their
     // multi-segment (month/day/year/hour/minute/meridiem) editing is a

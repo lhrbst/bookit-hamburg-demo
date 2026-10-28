@@ -8,6 +8,7 @@ import { peopleRouter } from './routes/people';
 import { purposesRouter } from './routes/purposes';
 import { meRouter } from './routes/me';
 import { errorHandler } from './middleware/errorHandler';
+import { systemClock, withClock, type Clock } from './domain/clock';
 
 /**
  * Application composition root.
@@ -16,8 +17,9 @@ import { errorHandler } from './middleware/errorHandler';
  * no view engine, no server-rendered templates are configured anywhere in
  * this file or elsewhere in the app.
  */
-export function createApp() {
+export function createApp(clock: Clock = systemClock) {
   const app = express();
+  app.use((_req, _res, next) => withClock(clock, next));
 
   app.use(
     cors({
@@ -51,4 +53,3 @@ export function createApp() {
 
   return app;
 }
-

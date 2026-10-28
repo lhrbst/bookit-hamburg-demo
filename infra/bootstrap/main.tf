@@ -1,13 +1,14 @@
 provider "azurerm" {
   features {}
 
-  storage_use_azuread = true
+  storage_use_azuread             = true
+  resource_provider_registrations = "none"
 }
 
 variable "resource_group_name" {
   description = "Resource group that holds the Terraform state account."
   type        = string
-  default     = "rg-Momme-Ristow"
+  default     = "rg-Herbst-Lukas"
 }
 
 variable "location" {
@@ -52,6 +53,10 @@ resource "azurerm_storage_account" "state" {
     managedBy   = "opentofu"
     purpose     = "tofu-state"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "azurerm_role_assignment" "deployer_blob" {
@@ -66,6 +71,10 @@ resource "azurerm_storage_container" "state" {
   container_access_type = "private"
 
   depends_on = [azurerm_role_assignment.deployer_blob]
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 output "state_resource_group_name" {
